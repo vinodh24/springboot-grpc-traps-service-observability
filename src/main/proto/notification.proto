@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.vinodh";
+option java_outer_classname = "NotificationProto";
+
+service NotificationService {
+  rpc StreamNotifications (stream SNMPNotification) returns (stream ProcessStatus);
+}
+
+message SNMPNotification {
+  string deviceId = 1;
+  string oid = 2;
+  string value = 3;
+  string timestamp = 4;
+}
+
+message ProcessStatus {
+  bool success = 1;
+  string message = 2;
+  string errorCode = 3;
+}

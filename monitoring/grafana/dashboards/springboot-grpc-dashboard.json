@@ -1,0 +1,211 @@
+{
+  "id": null,
+  "uid": "springboot-grpc-complete",
+  "title": "Spring Boot + gRPC Complete Monitoring Dashboard",
+  "tags": ["springboot", "grpc", "micrometer", "otel"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "row",
+      "title": "SYSTEM / JVM METRICS",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "JVM Uptime",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "process_uptime_seconds", "legendFormat": "Uptime" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
+      "gridPos": { "x": 0, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "CPU Usage (%)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "process_cpu_usage * 100", "legendFormat": "CPU" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percent" }
+      },
+      "gridPos": { "x": 3, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Live Threads",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_threads_live_threads", "legendFormat": "Live" }
+      ],
+      "gridPos": { "x": 6, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Daemon Threads",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_threads_daemon_threads", "legendFormat": "Daemon" }
+      ],
+      "gridPos": { "x": 9, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "graph",
+      "title": "JVM Memory Usage (MB)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes / 1024 / 1024",
+          "legendFormat": "{{area}} used"
+        },
+        {
+          "expr": "jvm_memory_max_bytes / 1024 / 1024",
+          "legendFormat": "{{area}} max"
+        }
+      ],
+      "yaxes": [{ "format": "megabytes" }, { "format": "short" }],
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 5 }
+    },
+    {
+      "type": "graph",
+      "title": "GC Pause Time",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(jvm_gc_pause_seconds_sum[1m])", "legendFormat": "GC pause" }
+      ],
+      "yaxes": [{ "format": "s" }, { "format": "short" }],
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "row",
+      "title": "HTTP + gRPC REQUEST METRICS",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "graph",
+      "title": "HTTP & gRPC Request Rate (req/s)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count[1m])",
+          "legendFormat": "HTTP {{uri}}"
+        },
+        {
+          "expr": "rate(grpc_server_requests_received_messages_total[1m])",
+          "legendFormat": "gRPC {{grpc_method}}"
+        }
+      ],
+      "yaxes": [{ "format": "reqps" }, { "format": "short" }],
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "graph",
+      "title": "gRPC Error Rate",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(grpc_server_processing_duration_seconds_count{grpc_status!=\"OK\"}[1m]))",
+          "legendFormat": "gRPC Errors"
+        }
+      ],
+      "yaxes": [{ "format": "reqps" }, { "format": "short" }],
+      "gridPos": { "x": 0, "y": 22, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "graph",
+      "title": "gRPC Requests by Status Code",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(grpc_server_processing_duration_seconds_count[1m])) by (grpc_status)",
+          "legendFormat": "{{grpc_status}}"
+        }
+      ],
+      "yaxes": [{ "format": "reqps" }, { "format": "short" }],
+      "gridPos": { "x": 0, "y": 28, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "graph",
+      "title": "Latency Percentiles (HTTP + gRPC)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[1m])) by (le))",
+          "legendFormat": "HTTP P95"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_processing_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "gRPC P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(grpc_server_processing_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "gRPC P99"
+        }
+      ],
+      "yaxes": [{ "format": "s" }, { "format": "short" }],
+      "gridPos": { "x": 0, "y": 34, "w": 12, "h": 6 }
+    },
+
+    {
+      "type": "graph",
+      "title": "gRPC Latency Per Method (P95)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_processing_duration_seconds_bucket[1m])) by (grpc_method, le))",
+          "legendFormat": "{{grpc_method}}"
+        }
+      ],
+      "yaxes": [{ "format": "s" }],
+      "gridPos": { "x": 0, "y": 41, "w": 12, "h": 6 }
+    },
+
+    {
+      "type": "row",
+      "title": "PAYLOAD & SIZE METRICS",
+      "collapsed": false,
+      "panels": []
+    },
+
+    {
+      "type": "graph",
+      "title": "gRPC Request Size (P95)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_request_size_bytes_bucket[5m])) by (le))",
+          "legendFormat": "Request Size P95"
+        }
+      ],
+      "yaxes": [{ "format": "bytes" }],
+      "gridPos": { "x": 0, "y": 48, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "graph",
+      "title": "gRPC Response Size (P95)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_response_size_bytes_bucket[5m])) by (le))",
+          "legendFormat": "Response Size P95"
+        }
+      ],
+      "yaxes": [{ "format": "bytes" }],
+      "gridPos": { "x": 0, "y": 54, "w": 12, "h": 5 }
+    }
+
+  ]
+}
