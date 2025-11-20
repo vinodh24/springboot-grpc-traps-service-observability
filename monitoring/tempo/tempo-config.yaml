@@ -1,6 +1,6 @@
 server:
   http_listen_port: 3200
-  grpc_listen_port: 9095
+  grpc_listen_port: 4317
 
 distributor:
   receivers:
@@ -10,9 +10,16 @@ distributor:
         http:
 
 ingester:
-  trace_idle_period: 30m
-  max_block_bytes: 104857600  # 100MB
-  max_block_duration: 5m
+  lifecycler:
+    ring:
+      kvstore:
+        store: inmemory
+    final_sleep: 0s
+
+metrics_generator:
+  processor:
+    service_graphs: {}
+    span_metrics: {}
 
 storage:
   trace:

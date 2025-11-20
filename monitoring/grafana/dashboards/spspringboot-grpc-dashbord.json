@@ -1,0 +1,352 @@
+{
+  "id": null,
+  "uid": "springboot-grpc-enterprise",
+  "title": "Spring Boot + gRPC Enterprise Monitoring",
+  "tags": ["springboot","grpc","micrometer","otel","tempo"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "row",
+      "title": "SYSTEM / JVM OVERVIEW",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Uptime (s)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "process_uptime_seconds", "legendFormat": "uptime" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "x": 0, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "CPU Usage (%)",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "process_cpu_usage * 100", "legendFormat": "cpu" }],
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "gridPos": { "x": 3, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Heap Used (MB)",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "jvm_memory_used_bytes{area=\"heap\"} / 1024 / 1024", "legendFormat": "heap used" }],
+      "fieldConfig": { "defaults": { "unit": "megabytes" } },
+      "gridPos": { "x": 6, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "stat",
+      "title": "Threads",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "jvm_threads_live_threads", "legendFormat": "live threads" }],
+      "gridPos": { "x": 9, "y": 1, "w": 3, "h": 3 }
+    },
+    {
+      "type": "graph",
+      "title": "JVM Memory (Heap/Non-Heap) MB",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "jvm_memory_used_bytes / 1024 / 1024", "legendFormat": "{{area}} used", "hide": false },
+        { "expr": "jvm_memory_max_bytes / 1024 / 1024", "legendFormat": "{{area}} max", "hide": false }
+      ],
+      "yaxes": [{"format":"megabytes"},{"format":"short"}],
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 6 }
+    },
+    {
+      "type": "graph",
+      "title": "GC Pause Time (s/min)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "rate(jvm_gc_pause_seconds_sum[1m])", "legendFormat": "gc pause rate" }
+      ],
+      "yaxes": [{"format":"s"},{"format":"short"}],
+      "gridPos": { "x": 0, "y": 10, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "row",
+      "title": "HTTP & gRPC TRAFFIC",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "graph",
+      "title": "HTTP Request Rate (req/s)",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "sum(rate(http_server_requests_seconds_count[1m])) by (uri)", "legendFormat": "{{uri}}" }],
+      "yaxes":[{"format":"reqps"},{"format":"short"}],
+      "gridPos":{"x":0,"y":16,"w":6,"h":5}
+    },
+    {
+      "type": "graph",
+      "title": "gRPC Message Rate (req/s)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum(rate(grpc_server_requests_received_messages_total[1m])) by (service, method)", "legendFormat":"{{service}}/{{method}}" },
+        { "expr": "sum(rate(grpc_server_responses_sent_messages_total[1m])) by (service, method)", "legendFormat":"resp {{service}}/{{method}}", "hide": true }
+      ],
+      "yaxes":[{"format":"reqps"},{"format":"short"}],
+      "gridPos":{"x":6,"y":16,"w":6,"h":5}
+    },
+    {
+      "type": "graph",
+      "title": "gRPC RPC Rate (calls/s)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum(rate(grpc_server_processing_duration_seconds_count[1m])) by (service, method)", "legendFormat": "{{service}}/{{method}}" }
+      ],
+      "yaxes":[{"format":"reqps"},{"format":"short"}],
+      "gridPos":{"x":0,"y":22,"w":12,"h":5}
+    },
+    {
+      "type": "timeseries",
+      "title": "gRPC Error Rate (non-OK)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum(rate(grpc_server_processing_duration_seconds_count{statusCode!=\"OK\"}[1m])) by (service, method, statusCode)", "legendFormat":"{{service}}/{{method}} {{statusCode}}" }
+      ],
+      "gridPos": { "x": 0, "y": 28, "w": 12, "h": 5 }
+    },
+
+    {
+      "type": "row",
+      "title": "LATENCY & PERFORMANCE",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "graph",
+      "title": "Latency Percentiles (gRPC P50/P95/P99)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(grpc_server_processing_duration_seconds_bucket[5m])) by (le))", "legendFormat": "gRPC P50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(grpc_server_processing_duration_seconds_bucket[5m])) by (le))", "legendFormat": "gRPC P95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(grpc_server_processing_duration_seconds_bucket[5m])) by (le))", "legendFormat": "gRPC P99" }
+      ],
+      "yaxes":[{"format":"s"},{"format":"short"}],
+      "gridPos":{"x":0,"y":34,"w":8,"h":6}
+    },
+    {
+      "type": "heatmap",
+      "title": "Latency Heatmap (gRPC)",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "sum(increase(grpc_server_processing_duration_seconds_bucket[5m])) by (le)", "legendFormat": "buckets" }
+      ],
+      "gridPos": { "x": 8, "y": 34, "w": 4, "h": 6 }
+    },
+    {
+      "type": "barGauge",
+      "title": "Top methods by P95 latency",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum(rate(grpc_server_processing_duration_seconds_bucket[5m])) by (grpc_method, le)))",
+          "legendFormat": "{{grpc_method}}"
+        }
+      ],
+      "gridPos": {"x":0,"y":40,"w":12,"h":6}
+    },
+    {
+      "type": "table",
+      "title": "Per-method Summary (calls | avg | p95)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(grpc_server_processing_duration_seconds_count[5m])) by (grpc_method)",
+          "legendFormat": "calls"
+        },
+        {
+          "expr": "sum(rate(grpc_server_processing_duration_seconds_sum[5m])) by (grpc_method) / sum(rate(grpc_server_processing_duration_seconds_count[5m])) by (grpc_method)",
+          "legendFormat": "avg_seconds"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_processing_duration_seconds_bucket[5m])) by (grpc_method, le))",
+          "legendFormat": "p95_seconds"
+        }
+      ],
+      "gridPos": {"x":0,"y":47,"w":12,"h":7}
+    },
+
+    {
+      "type": "row",
+      "title": "PAYLOAD / SIZE METRICS",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "graph",
+      "title": "gRPC Request Size P95 (bytes)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_request_size_bytes_bucket[5m])) by (le))",
+          "legendFormat": "req size p95"
+        },
+        {
+          "expr": "rate(grpc_server_request_size_bytes_sum[5m]) / rate(grpc_server_request_size_bytes_count[5m])",
+          "legendFormat": "req size avg"
+        }
+      ],
+      "yaxes":[{"format":"bytes"},{"format":"short"}],
+      "gridPos": {"x": 0, "y": 55, "w": 6, "h": 5}
+    },
+    {
+      "type": "graph",
+      "title": "gRPC Response Size P95 (bytes)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(grpc_server_response_size_bytes_bucket[5m])) by (le))",
+          "legendFormat": "resp size p95"
+        },
+        {
+          "expr": "rate(grpc_server_response_size_bytes_sum[5m]) / rate(grpc_server_response_size_bytes_count[5m])",
+          "legendFormat": "resp size avg"
+        }
+      ],
+      "yaxes":[{"format":"bytes"},{"format":"short"}],
+      "gridPos": {"x": 6, "y": 55, "w": 6, "h": 5}
+    },
+
+    {
+      "type": "row",
+      "title": "STATUS & ERRORS",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "piechart",
+      "title": "gRPC Status Code Distribution (1m)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(grpc_server_processing_duration_seconds_count[1m])) by (statusCode)",
+          "legendFormat": "{{statusCode}}"
+        }
+      ],
+      "gridPos": {"x":0,"y":61,"w":6,"h":5}
+    },
+    {
+      "type": "barGauge",
+      "title": "Top Error Methods (non-OK)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, sum(rate(grpc_server_processing_duration_seconds_count{statusCode!=\"OK\"}[5m])) by (grpc_method))",
+          "legendFormat": "{{grpc_method}}"
+        }
+      ],
+      "gridPos": {"x":6,"y":61,"w":6,"h":5}
+    },
+
+    {
+      "type": "row",
+      "title": "TRACING (Tempo)",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "trace",
+      "title": "Recent Traces (Tempo)",
+      "datasource": "Tempo",
+      "targets": [],
+      "gridPos": {"x":0,"y":67,"w":12,"h":8}
+    },
+
+    {
+      "type": "row",
+      "title": "THREADPOOL / EXECUTOR",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "graph",
+      "title": "Executor Queued Tasks",
+      "datasource": "Prometheus",
+      "targets": [
+        { "expr": "executor_queued_tasks{application=\"springboot-grpc-traps-service-server\",name=\"applicationTaskExecutor\"}", "legendFormat": "queued" },
+        { "expr": "executor_active_threads{application=\"springboot-grpc-traps-service-server\",name=\"applicationTaskExecutor\"}", "legendFormat": "active" }
+      ],
+      "gridPos": {"x":0,"y":75,"w":12,"h":5}
+    },
+
+    {
+      "type": "row",
+      "title": "INFRA / HOST (if available)",
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "graph",
+      "title": "System CPU (system_cpu_usage)",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "system_cpu_usage * 100", "legendFormat": "system cpu %" }],
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "gridPos": { "x": 0, "y": 81, "w": 6, "h": 4 }
+    },
+    {
+      "type": "graph",
+      "title": "Disk Free (GB)",
+      "datasource": "Prometheus",
+      "targets": [{ "expr": "disk_free_bytes / 1024 / 1024 / 1024", "legendFormat": "disk free GB" }],
+      "gridPos": { "x": 6, "y": 81, "w": 6, "h": 4 }
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "application",
+        "label": "Application",
+        "datasource": "Prometheus",
+        "query": "label_values(grpc_server_processing_duration_seconds_count, application)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": false,
+        "current": { "text": "springboot-grpc-traps-service-server", "value": "springboot-grpc-traps-service-server" }
+      },
+      {
+        "type": "query",
+        "name": "service",
+        "label": "gRPC Service",
+        "datasource": "Prometheus",
+        "query": "label_values(grpc_server_processing_duration_seconds_count{application=\"$application\"}, service)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true
+      },
+      {
+        "type": "query",
+        "name": "method",
+        "label": "gRPC Method",
+        "datasource": "Prometheus",
+        "query": "label_values(grpc_server_processing_duration_seconds_count{application=\"$application\"}, method)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Enterprise-grade dashboard for Spring Boot + gRPC (Micrometer + Prometheus + Tempo). Includes JVM, gRPC latency, request/response sizes, traces and executor metrics.",
+  "links": []
+}
